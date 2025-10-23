@@ -184,6 +184,25 @@ public class AuthService : IAuthService
         await _applicationDBContext.SaveChangesAsync();
     }
 
+    public async Task<bool> ResetPasswordAsync(ResetPasswordRequest request)
+    {
+        var user = await _applicationDBContext.Users
+            .FirstOrDefaultAsync(u => u.Email == request.Email || u.Username == request.Email);
+
+        if (user == null)
+        {
+            throw new KeyNotFoundException("User not found");
+        }
+
+        HashingHelper.CreatePasswordHash(request.NewPassword, out byte[] passwordHash, out byte[] passwordSalt);
+
+        user.PasswordHash = passwordHash;
+        user.PasswordSalt = passwordSalt;
+        await _applicationDBContext.SaveChangesAsync();
+
+        return true;
+    }
+
     private async Task<AccessToken> CreateAccessToken(User user)
     {
         var operationClaims = await _applicationDBContext.UserOperationClaims

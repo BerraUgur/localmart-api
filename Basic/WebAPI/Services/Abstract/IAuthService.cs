@@ -5,6 +5,7 @@ namespace WebAPI.Services.Abstract;
 
 public interface IAuthService
 {
+    Task<bool> ResetPasswordAsync(ResetPasswordRequest request);
     Task Register(RegisterRequest registerRequest);
     Task<LoginResponse> Login(LoginRequest loginRequest);
     Task<LoginResponse> RefreshToken(RefreshTokenRequest refreshTokenRequest);

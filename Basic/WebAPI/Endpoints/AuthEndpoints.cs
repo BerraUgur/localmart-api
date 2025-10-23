@@ -37,32 +37,31 @@ public static class AuthEndpoints
                 var result = await authService.RefreshToken(refreshTokenRequest);
                 return Results.Ok(result);
             }).AddEndpointFilter<ValidatorFilter<RefreshTokenRequest>>();
-        
-        
+
         auth.MapPost("{userId}/make-seller", async (int userId, IAuthService authService) =>
         {
-                await authService.MakeUserSellerAsync(userId);
-                return Results.Ok("User role updated to Seller");
+            await authService.MakeUserSellerAsync(userId);
+            return Results.Ok("User role updated to Seller");
         }).RequireAuthorization("admin");
-        
+
         auth.MapPost("{userId}/make-normal", async (int userId, IAuthService authService) =>
         {
-                await authService.MakeUserNormalAsync(userId);
-                return Results.Ok("User role updated to User");
+            await authService.MakeUserNormalAsync(userId);
+            return Results.Ok("User role updated to User");
         }).RequireAuthorization("admin");
-        
+
         auth.MapPut("{userId}/update", async (int userId, IAuthService authService, UpdateUserRequest updateUserRequest) =>
         {
             await authService.UpdateUserAsync(userId, updateUserRequest);
             return Results.Ok("User information updated successfully");
         }).RequireAuthorization();
-        
+
         auth.MapGet("userlist", async (IAuthService authService) =>
         {
             var users = await authService.GetUserListAsync();
             return Results.Ok(users);
         }).RequireAuthorization("admin");
-        
+
         auth.MapGet("{userId}", async (int userId, IAuthService authService) =>
         {
             var user = await authService.GetUserByIdAsync(userId);
@@ -81,10 +80,16 @@ public static class AuthEndpoints
             return Results.NoContent();
         });
 
-
         // 🔥 Basit Mail Gönderme Endpoint'i
-        auth.MapPost("send-mail", (MailRequest request) =>
+        auth.MapPost("send-mail", async (IAuthService authService, MailRequest request) =>
         {
+            // Email adresi sistemde kayıtlı mı kontrolü
+            var users = await authService.GetUserListAsync();
+            bool exists = users.Any(u => u.Email == request.To);
+            if (!exists)
+            {
+                return Results.BadRequest("Email not found in system");
+            }
             try
             {
                 ServicePointManager.ServerCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => true;
@@ -105,7 +110,6 @@ public static class AuthEndpoints
                 mail.From = new MailAddress("berra12320@gmail.com", "Localmart");
                 mail.To.Add(request.To);
                 mail.Subject = request.Subject;
-                //mail.Body = "email: " + request.To + "<br/>" + request.Body;
                 mail.Body = formattedBody;
                 mail.IsBodyHtml = true;
 
@@ -121,7 +125,14 @@ public static class AuthEndpoints
                 return Results.Problem("Mail gönderilirken hata oluştu: " + ex.Message);
             }
         });
-
-
+        auth.MapPost("reset-password", async (IAuthService authService, ResetPasswordRequest request) =>
+        {
+            var result = await authService.ResetPasswordAsync(request);
+            if (!result)
+            {
+                return Results.BadRequest("User not found");
+            }
+            return Results.Ok("Password reset successful");
+        });
     }
 }
