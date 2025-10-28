@@ -45,7 +45,6 @@ public class JwtHelper : ITokenHelper
                 CreatedByIp = ipAddress,
                 Created = DateTime.UtcNow
             };
-
         return refreshToken;
     }
 

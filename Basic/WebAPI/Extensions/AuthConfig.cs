@@ -21,7 +21,6 @@ public static class AuthConfig
                 IssuerSigningKey = SecurityKeyHelper.CreateSecurityKey(tokenOptions.SecurityKey)
             };
         });
-
         return services;
     }
 }

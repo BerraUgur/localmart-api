@@ -16,7 +16,7 @@ public static class SwaggerConfig
                 Type = SecuritySchemeType.ApiKey
             });
             x.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
+            {
         {new OpenApiSecurityScheme
         {
             Reference = new OpenApiReference
@@ -25,11 +25,8 @@ public static class SwaggerConfig
                 Type = ReferenceType.SecurityScheme,
             }
         }, new List<string>()}
-    });
+            });
         });
-
-
         return services;
     }
-
 }

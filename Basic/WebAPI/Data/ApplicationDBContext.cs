@@ -15,5 +15,6 @@ public class ApplicationDBContext : DbContext
     public DbSet<OrderItem> OrderItems { get; set; }
     public DbSet<Comment> Comments { get; set; }
     public DbSet<Address> Addresses { get; set; }
+    public DbSet<Log> Logs { get; set; }
     public ApplicationDBContext(DbContextOptions options) : base(options) { }
 }

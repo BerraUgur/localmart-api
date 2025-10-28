@@ -40,6 +40,31 @@ Localmart API is a robust .NET 7 WebAPI backend for the Localmart e-commerce pla
 - Docker (for database)
 - DBeaver or SQL Server Management Studio (for database management)
 
+## Project Structure
+```
+Basic/WebAPI/
+├── appsettings.json         # Main configuration file for API and database
+├── Data/                   # Entity Framework database context
+├── Endpoints/              # Minimal API endpoint definitions
+├── Extensions/             # Extension methods for configuration and services
+├── Filters/                # Request validation and error handling filters
+├── Middleware/             # Custom middleware (e.g., logging)
+├── Migrations/             # Database migration files
+├── Models/                 # Entity models (User, Product, Log, etc.)
+├── Program.cs              # Main entry point and configuration
+├── Security/               # JWT, encryption, and security helpers
+├── Services/               # Business logic and service classes
+├── Validators/             # FluentValidation validators
+├── wwwroot/                # Static files (images, etc.)
+```
+- **appsettings.json**: API and database configuration.
+- **Models/**: Contains all entity classes (User, Product, Log, etc.).
+- **Services/**: Business logic for products, orders, users, logging.
+- **Endpoints/**: Minimal API endpoint definitions.
+- **Middleware/**: Custom middleware (logging, error handling).
+- **Migrations/**: Database migration history.
+- **Program.cs**: Main API startup and configuration.
+
 ### Installation
 1. Clone the repository:
    ```bash
@@ -65,7 +90,7 @@ http://localhost:3000/
 ```
 3. Access Swagger UI for API documentation:
    ```
-http://localhost:3000/swagger
+http://localhost:3000/swagger/index.html
 ```
 
 ### Database Setup
@@ -95,6 +120,7 @@ dotnet test
 - Docker
 - Dbeaver
 - Swagger
+- postgreSQL
 - FluentValidation
 
 ## Contribution

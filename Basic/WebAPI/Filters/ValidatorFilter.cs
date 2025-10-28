@@ -3,31 +3,26 @@ using WebAPI.Extensions;
 
 namespace WebAPI.Filters;
 
-public class ValidatorFilter<T> : IEndpointFilter where T : class
+public class ValidatorFilter<T>(IValidator<T> validator) : IEndpointFilter where T : class
 {
-    private readonly IValidator<T> _validator;
-
-    public ValidatorFilter(IValidator<T> validator)
+    public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
-        _validator = validator;
-    }
-
-    public async ValueTask<object?> InvokeAsync(
-        EndpointFilterInvocationContext context,
-        EndpointFilterDelegate next)
-    {
-        if (context.Arguments
-            .SingleOrDefault(x => x.GetType() == typeof(T)) is not T validatable)
+        if (context?.Arguments == null)
             return Results.BadRequest();
 
-        var validationResult = await _validator.ValidateAsync(validatable);
+        var validatable = context.Arguments.SingleOrDefault(x => x?.GetType() == typeof(T));
+        if (validatable is not T validatableObj)
+            return Results.BadRequest();
+
+        if (validator == null)
+            return Results.BadRequest("Validator is not available.");
+
+        var validationResult = await validator.ValidateAsync(validatableObj);
 
         if (!validationResult.IsValid)
             return Results.BadRequest(validationResult.Errors.ToRespose());
 
-        //Before endpoint
         var result = await next(context);
-        //After endpoint
         return result;
     }
 }

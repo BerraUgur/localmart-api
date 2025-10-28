@@ -10,9 +10,7 @@ public class User
     public string LastName { get; set; }
     public string Username { get; set; }
     public string Email { get; set; }
-
     public string PhoneNumber { get; set; }
-
     public Role Role { get; set; } = Role.Seller;
     public byte[] PasswordSalt { get; set; }
     public byte[] PasswordHash { get; set; }

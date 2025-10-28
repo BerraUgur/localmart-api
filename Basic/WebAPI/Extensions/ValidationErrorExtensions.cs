@@ -13,7 +13,6 @@ public static class ValidationErrorExtensions
         }).ToList() ;
     }
 }
-
 public class ValidationErrorResponse
 {
     public string Property { get; set; }
