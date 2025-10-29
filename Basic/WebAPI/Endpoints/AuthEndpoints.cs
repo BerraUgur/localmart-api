@@ -1,13 +1,17 @@
-﻿using System.Net.Mail;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Net;
+using System.Net.Mail;
+using WebAPI.Data;
 using WebAPI.Filters;
+using WebAPI.Models;
 using WebAPI.ModelViews;
 using WebAPI.Services.Abstract;
-using Microsoft.AspNetCore.Mvc;
 
 namespace WebAPI.Endpoints;
 
 public record MailRequest(string To, string Subject, string Body);
+public record ForgotPasswordRequest(string Email);
 public static class AuthEndpoints
 {
     private static readonly string[] BrSeparator = ["</br>"];
@@ -21,6 +25,7 @@ public static class AuthEndpoints
         var smtpUser = smtpSection["User"];
         var smtpPass = smtpSection["Password"];
         var smtpSenderName = smtpSection["SenderName"];
+        var frontendUrl = config["FrontendUrl"];
 
         var auth = app.MapGroup("auth").WithTags("Auth");
 
@@ -136,15 +141,75 @@ public static class AuthEndpoints
             }
         });
 
-        auth.MapPost("reset-password", async (IAuthService authService, ResetPasswordRequest request, [FromServices] ILogger<object> logger) =>
+        auth.MapPost("reset-password", async (IAuthService authService, ResetPasswordRequest request, ApplicationDBContext db, [FromServices] ILogger<object> logger) =>
         {
+            // Token valid control
+            var tokenEntry = await db.PasswordResetTokens.FirstOrDefaultAsync(t => t.Token == request.Token);
+            if (tokenEntry == null || tokenEntry.IsUsed || tokenEntry.ExpirationDate < DateTime.UtcNow)
+            {
+                logger.LogWarning("Password reset failed. Token invalid or expired: {Token}", request.Token);
+                return Results.BadRequest("The link is expired or invalid.");
+            }
+            // Token is valid, reset password
             var result = await authService.ResetPasswordAsync(request);
             if (!result)
             {
                 logger.LogWarning("Password reset failed. User not found: {Email}", request.Email);
                 return Results.BadRequest("User not found");
             }
+            tokenEntry.IsUsed = true;
+            await db.SaveChangesAsync();
             return Results.Ok("Password reset successful");
+        });
+        auth.MapPost("forgot-password", async (IAuthService authService, ForgotPasswordRequest request, ApplicationDBContext db, [FromServices] ILogger<object> logger) =>
+        {
+            var user = await db.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+            if (user == null)
+            {
+                logger.LogWarning("Forgot password: Email not found {Email}", request.Email);
+                return Results.BadRequest("Email not found");
+            }
+
+            // Token creation
+            var token = Guid.NewGuid().ToString();
+            var expiration = DateTime.UtcNow.AddMinutes(10);
+            var resetToken = new PasswordResetToken
+            {
+                Token = token,
+                Email = request.Email,
+                ExpirationDate = expiration,
+                IsUsed = false
+            };
+            db.PasswordResetTokens.Add(resetToken);
+            await db.SaveChangesAsync();
+
+            var resetUrl = $"{frontendUrl}/reset-password?token={token}&email={request.Email}";
+            var mailBody = $"You can use the link below to reset your password (valid for 10 minutes): <a href='{resetUrl}'>{resetUrl}</a>";
+            var mailRequest = new MailRequest(request.Email, "Password Reset", mailBody);
+            try
+            {
+                ServicePointManager.ServerCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => true;
+                var mail = new MailMessage
+                {
+                    From = new MailAddress(smtpUser, smtpSenderName),
+                    Subject = mailRequest.Subject,
+                    Body = mailRequest.Body,
+                    IsBodyHtml = true
+                };
+                mail.To.Add(mailRequest.To);
+                var smtp = new SmtpClient(smtpHost, smtpPort)
+                {
+                    Credentials = new NetworkCredential(smtpUser, smtpPass),
+                    EnableSsl = smtpEnableSsl
+                };
+                smtp.Send(mail);
+                return Results.Ok("Password reset email sent successfully");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Password reset email could not be sent: {Email}", request.Email);
+                return Results.Problem("Email could not be sent: " + ex.Message);
+            }
         });
     }
 }

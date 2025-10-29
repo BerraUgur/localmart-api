@@ -16,5 +16,6 @@ public class ApplicationDBContext : DbContext
     public DbSet<Comment> Comments { get; set; }
     public DbSet<Address> Addresses { get; set; }
     public DbSet<Log> Logs { get; set; }
+    public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
     public ApplicationDBContext(DbContextOptions options) : base(options) { }
 }

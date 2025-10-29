@@ -195,18 +195,28 @@ public class AuthService : IAuthService
 
     public async Task<bool> ResetPasswordAsync(ResetPasswordRequest request)
     {
+        var tokenEntry = await _applicationDBContext.PasswordResetTokens
+            .FirstOrDefaultAsync(t => t.Token == request.Token && t.Email == request.Email);
+        if (tokenEntry == null || tokenEntry.IsUsed || tokenEntry.ExpirationDate < DateTime.UtcNow)
+        {
+            _logger.LogWarning("Password reset failed. Token invalid or expired: {Token}", request.Token);
+            return false;
+        }
+
         var user = await _applicationDBContext.Users
             .FirstOrDefaultAsync(u => u.Email == request.Email || u.Username == request.Email);
-
         if (user is null)
-            throw new KeyNotFoundException("User not found");
+        {
+            _logger.LogWarning("Password reset failed. User not found: {Email}", request.Email);
+            return false;
+        }
 
         HashingHelper.CreatePasswordHash(request.NewPassword, out byte[] passwordHash, out byte[] passwordSalt);
-
         user.PasswordHash = passwordHash;
         user.PasswordSalt = passwordSalt;
-        await _applicationDBContext.SaveChangesAsync();
 
+        tokenEntry.IsUsed = true;
+        await _applicationDBContext.SaveChangesAsync();
         return true;
     }
 

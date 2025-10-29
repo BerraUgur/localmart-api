@@ -18,7 +18,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddJsonFile("secrets.json", optional: true, reloadOnChange: true);
 
 // CORS
-var allowedOrigins = new[] { "http://localhost:4200", "http://localhost:8100" };
+var frontendUrl = builder.Configuration["FrontendUrl"];
+var allowedOrigins = new[] { frontendUrl };
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontendClients", policy =>
