@@ -67,36 +67,36 @@ Basic/WebAPI/
 
 ### Installation
 1. Clone the repository:
-   ```bash
+```bash
 git clone https://github.com/BerraUgur/localmart-api.git
 ```
 2. Navigate to the project directory:
-   ```bash
+```bash
 cd localmart-api/Basic/WebAPI
 ```
 3. Restore dependencies:
-   ```bash
+```bash
 dotnet restore
 ```
 
 ### Running the Application
 1. Start the API server:
-   ```bash
+```bash
 dotnet run
 ```
 2. The API will be available at:
-   ```
+```
 http://localhost:3000/
 ```
 3. Access Swagger UI for API documentation:
-   ```
+```
 http://localhost:3000/swagger/index.html
 ```
 
 ### Database Setup
 - Use Docker to run a SQL Server or PostgreSQL instance for development.
 - Apply Entity Framework Core migrations:
-   ```bash
+```bash
 dotnet ef database update
 ```
 - Manage and inspect the database with DBeaver or SQL Server Management Studio.

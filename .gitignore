@@ -39,7 +39,7 @@ Thumbs.db
 .env
 
 # secrets
-#secrets.json
+secrets.json
 
 ## Project Specific
 Basic/WebAPI/wwwroot/images/

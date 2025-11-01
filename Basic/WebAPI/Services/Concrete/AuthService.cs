@@ -1,5 +1,4 @@
-﻿using FootballAPI.Security;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using WebAPI.Data;
 using WebAPI.ModelViews;
 using WebAPI.Security;

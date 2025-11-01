@@ -1,31 +1,33 @@
-﻿using FluentValidation;
+﻿using System.Reflection;
+using System.Text.Json.Serialization;
+using AspNetCoreRateLimit;
+using FluentValidation;
+using Microsoft.AspNetCore.Http.Json;
 using Microsoft.EntityFrameworkCore;
-using System.Reflection;
 using WebAPI.Data;
 using WebAPI.Endpoints;
 using WebAPI.Extensions;
+using WebAPI.Middleware;
+using WebAPI.Security;
 using WebAPI.Security.Enums;
 using WebAPI.Services.Abstract;
 using WebAPI.Services.Concrete;
-using System.Text.Json.Serialization;
-using Microsoft.AspNetCore.Http.Json;
-using AspNetCoreRateLimit;
-using WebAPI.Security;
-using FootballAPI.Security;
 
 var builder = WebApplication.CreateBuilder(args);
+
 // Load secrets.json for sensitive data
 builder.Configuration.AddJsonFile("secrets.json", optional: true, reloadOnChange: true);
 
 // CORS
 var frontendUrl = builder.Configuration["FrontendUrl"];
-var allowedOrigins = new[] { frontendUrl };
+var allowedOrigins = frontendUrl.Split(',', StringSplitOptions.RemoveEmptyEntries);
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontendClients", policy =>
         policy.WithOrigins(allowedOrigins)
               .AllowAnyHeader()
-              .AllowAnyMethod());
+              .AllowAnyMethod()
+              .AllowCredentials());
 });
 
 // Dependency Injection
@@ -71,14 +73,25 @@ builder.Services.AddInMemoryRateLimiting();
 
 var app = builder.Build();
 
-// Global Exception Handling
+// Global exception handling
 app.UseExceptionHandler(errorApp =>
 {
     errorApp.Run(async context =>
     {
+        var exceptionHandlerFeature = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>();
+        var error = exceptionHandlerFeature?.Error;
+        
+        var errorResponse = new WebAPI.Models.ErrorResponse(
+            statusCode: 500,
+            message: "An unexpected error occurred.",
+            details: app.Environment.IsDevelopment() ? error?.Message : null,
+            traceId: context.TraceIdentifier
+        );
+
         context.Response.StatusCode = 500;
         context.Response.ContentType = "application/json";
-        await context.Response.WriteAsync("{\"error\":\"An unexpected error occurred.\"}");
+        
+        await context.Response.WriteAsJsonAsync(errorResponse);
     });
 });
 
@@ -92,9 +105,10 @@ app.UseCors("AllowFrontendClients");
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Endpoints
 // Exception logging middleware
-app.UseMiddleware<WebAPI.Middleware.ExceptionLoggingMiddleware>();
+app.UseMiddleware<ExceptionLoggingMiddleware>();
+
+// Endpoints
 app.RegisterAuthEndpoints();
 app.RegisterProductEndpoints();
 app.RegisterCommentEndpoints();

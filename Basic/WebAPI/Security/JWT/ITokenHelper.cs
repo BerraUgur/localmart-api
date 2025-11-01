@@ -1,6 +1,4 @@
-﻿using WebAPI.Security;
-
-namespace FootballAPI.Security;
+﻿namespace WebAPI.Security;
 
 public interface ITokenHelper
 {

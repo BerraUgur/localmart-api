@@ -12,9 +12,11 @@ namespace WebAPI.Endpoints;
 
 public record MailRequest(string To, string Subject, string Body);
 public record ForgotPasswordRequest(string Email);
+
 public static class AuthEndpoints
 {
-    private static readonly string[] BrSeparator = ["</br>"];
+    private const string EmailSeparator = "</br>";
+    
     public static void RegisterAuthEndpoints(this WebApplication app)
     {
         var config = app.Services.GetRequiredService<IConfiguration>();
@@ -101,62 +103,41 @@ public static class AuthEndpoints
             }
             try
             {
-                ServicePointManager.ServerCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => true;
-
-                string[] lines = request.Body.Split(BrSeparator, StringSplitOptions.None);
-
-                string formattedBody = "<html><body>";
-                foreach (var line in lines)
-                {
-                    formattedBody += $"<p>{line}</p>";
-                }
-                formattedBody += "</body></html>";
+                var emailBody = FormatEmailBody(request.Body);
 
                 if (string.IsNullOrEmpty(smtpUser))
                 {
                     logger.LogError("SMTP user is null or empty.");
                     return Results.Problem("SMTP user is not configured.");
                 }
-                var mail = new MailMessage
-                {
-                    From = new MailAddress(smtpUser, smtpSenderName),
-                    Subject = request.Subject,
-                    Body = formattedBody,
-                    IsBodyHtml = true
-                };
-                mail.To.Add(request.To);
-                var smtp = new SmtpClient(smtpHost, smtpPort)
-                {
-                    Credentials = new NetworkCredential(smtpUser, smtpPass),
-                    EnableSsl = smtpEnableSsl
-                };
-                smtp.Send(mail);
+                
+                await SendEmailAsync(smtpHost, smtpPort, smtpUser, smtpPass, smtpSenderName, smtpEnableSsl, request.To, request.Subject, emailBody);
 
                 return Results.Ok("Mail sent successfully");
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "An error occurred while sending the mail to: {Email}", request.To);
-                return Results.Problem("An error occurred while sending the mail: " + ex.Message);
+                return Results.Problem("An error occurred while sending the mail.");
             }
         });
 
         auth.MapPost("reset-password", async (IAuthService authService, ResetPasswordRequest request, ApplicationDBContext db, [FromServices] ILogger<object> logger) =>
         {
-            // Token valid control
             var tokenEntry = await db.PasswordResetTokens.FirstOrDefaultAsync(t => t.Token == request.Token);
             if (tokenEntry == null || tokenEntry.IsUsed || tokenEntry.ExpirationDate < DateTime.UtcNow)
             {
                 logger.LogWarning("Password reset failed. Token invalid or expired: {Token}", request.Token);
                 return Results.BadRequest("The link is expired or invalid.");
             }
-            // Token is valid, reset password
+            
             var result = await authService.ResetPasswordAsync(request);
             if (!result)
             {
                 logger.LogWarning("Password reset failed. User not found: {Email}", request.Email);
                 return Results.BadRequest("User not found");
             }
+            
             tokenEntry.IsUsed = true;
             await db.SaveChangesAsync();
             return Results.Ok("Password reset successful");
@@ -170,7 +151,6 @@ public static class AuthEndpoints
                 return Results.BadRequest("Email not found");
             }
 
-            // Token creation
             var token = Guid.NewGuid().ToString();
             var expiration = DateTime.UtcNow.AddMinutes(10);
             var resetToken = new PasswordResetToken
@@ -185,31 +165,54 @@ public static class AuthEndpoints
 
             var resetUrl = $"{frontendUrl}/reset-password?token={token}&email={request.Email}";
             var mailBody = $"You can use the link below to reset your password (valid for 10 minutes): <a href='{resetUrl}'>{resetUrl}</a>";
-            var mailRequest = new MailRequest(request.Email, "Password Reset", mailBody);
+            
             try
             {
-                ServicePointManager.ServerCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => true;
-                var mail = new MailMessage
-                {
-                    From = new MailAddress(smtpUser, smtpSenderName),
-                    Subject = mailRequest.Subject,
-                    Body = mailRequest.Body,
-                    IsBodyHtml = true
-                };
-                mail.To.Add(mailRequest.To);
-                var smtp = new SmtpClient(smtpHost, smtpPort)
-                {
-                    Credentials = new NetworkCredential(smtpUser, smtpPass),
-                    EnableSsl = smtpEnableSsl
-                };
-                smtp.Send(mail);
+                await SendEmailAsync(smtpHost, smtpPort, smtpUser, smtpPass, smtpSenderName, smtpEnableSsl, request.Email, "Password Reset", mailBody);
                 return Results.Ok("Password reset email sent successfully");
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Password reset email could not be sent: {Email}", request.Email);
-                return Results.Problem("Email could not be sent: " + ex.Message);
+                return Results.Problem("Email could not be sent.");
             }
         });
+    }
+
+    private static string FormatEmailBody(string body)
+    {
+        string[] lines = body.Split(EmailSeparator, StringSplitOptions.None);
+        var formattedBody = "<html><body>";
+        foreach (var line in lines)
+        {
+            formattedBody += $"<p>{line}</p>";
+        }
+        formattedBody += "</body></html>";
+        return formattedBody;
+    }
+
+    private static async Task SendEmailAsync(string? host, int port, string? user, string? password, string? senderName, bool enableSsl, string to, string subject, string body)
+    {
+        if (string.IsNullOrEmpty(host) || string.IsNullOrEmpty(user) || string.IsNullOrEmpty(password))
+        {
+            throw new InvalidOperationException("SMTP configuration is incomplete.");
+        }
+
+        var mail = new MailMessage
+        {
+            From = new MailAddress(user, senderName),
+            Subject = subject,
+            Body = body,
+            IsBodyHtml = true
+        };
+        mail.To.Add(to);
+
+        using var smtp = new SmtpClient(host, port)
+        {
+            Credentials = new NetworkCredential(user, password),
+            EnableSsl = enableSsl
+        };
+
+        await smtp.SendMailAsync(mail);
     }
 }
