@@ -1,0 +1,47 @@
+﻿# Default ignored files
+/shelf/
+/workspace.xml
+# Rider ignored files
+/contentModel.xml
+/modules.xml
+/.idea.MarketApplication.iml
+/projectSettingsUpdater.xml
+# Editor-based HTTP Client requests
+/httpRequests/
+# Datasource local storage ignored files
+/dataSources/
+/dataSources.local.xml
+
+## IDE and Build Output Folders
+.vs/
+.idea/
+.vscode/
+bin/
+obj/
+
+## User/Session/Cache Files
+*.user
+*.suo
+*.dbmdl
+*.jfm
+*.log
+*.dtbcache.v2
+*.futdcache.v2
+
+## Node & Docker
+node_modules/
+Dockerfile*
+docker-compose*
+
+## OS/Tool Specific
+.DS_Store
+Thumbs.db
+.env
+
+# secrets
+secrets.json
+
+## Project Specific
+Basic/WebAPI/wwwroot/images/
+Basic/WebAPI/bin/
+Basic/WebAPI/obj/
