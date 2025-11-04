@@ -13,7 +13,7 @@ using WebAPI.Data;
 namespace WebAPI.Migrations
 {
     [DbContext(typeof(ApplicationDBContext))]
-    [Migration("20251028204648_mig1")]
+    [Migration("20251104172359_mig1")]
     partial class mig1
     {
         /// <inheritdoc />
@@ -217,7 +217,12 @@ namespace WebAPI.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int?>("UserId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("PasswordResetTokens");
                 });
@@ -437,11 +442,11 @@ namespace WebAPI.Migrations
                     b.HasOne("WebAPI.Models.Address", "Address")
                         .WithMany("Orders")
                         .HasForeignKey("AddressId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("WebAPI.Security.User", "User")
-                        .WithMany()
+                        .WithMany("Orders")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -468,6 +473,16 @@ namespace WebAPI.Migrations
                     b.Navigation("Order");
 
                     b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("WebAPI.Models.PasswordResetToken", b =>
+                {
+                    b.HasOne("WebAPI.Security.User", "User")
+                        .WithMany("PasswordResetTokens")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("WebAPI.Models.Product", b =>
@@ -536,6 +551,10 @@ namespace WebAPI.Migrations
                     b.Navigation("Addresses");
 
                     b.Navigation("Comments");
+
+                    b.Navigation("Orders");
+
+                    b.Navigation("PasswordResetTokens");
 
                     b.Navigation("Products");
 

@@ -21,6 +21,8 @@ public class User
     public virtual ICollection<Comment> Comments { get; set; } = null!;
     public virtual ICollection<Product> Products { get; set; } = null!;
     public virtual ICollection<Address> Addresses { get; set; } = null!;
+    public virtual ICollection<Order> Orders { get; set; } = null!;
+    public virtual ICollection<PasswordResetToken> PasswordResetTokens { get; set; } = null!;
     public User()
     {
         FirstName = string.Empty;
