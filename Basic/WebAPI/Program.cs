@@ -50,7 +50,7 @@ if (tokenOptions is not null)
 
 // Database
 builder.Services.AddDbContext<ApplicationDBContext>(opt =>
-    opt.UseNpgsql(builder.Configuration.GetConnectionString("PostgresSQL")));
+    opt.UseNpgsql(builder.Configuration.GetConnectionString("PostgreSQL")));
 
 // JSON
 builder.Services.Configure<JsonOptions>(options =>
