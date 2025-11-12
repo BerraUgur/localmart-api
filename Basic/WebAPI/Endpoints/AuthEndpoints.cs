@@ -181,6 +181,12 @@ public static class AuthEndpoints
 
     private static string FormatEmailBody(string body)
     {
+        // Guard: body null or empty return default template
+        if (string.IsNullOrWhiteSpace(body))
+        {
+            return "<html><body><p>No content provided.</p></body></html>";
+        }
+        
         string[] lines = body.Split(EmailSeparator, StringSplitOptions.None);
         var formattedBody = "<html><body>";
         foreach (var line in lines)
