@@ -1,19 +1,22 @@
-# Use Microsoft's .NET 8 SDK as the base image
+# 1. Build image
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /app
+WORKDIR /src
 
-# Copy project files and restore dependencies
-COPY *.csproj ./
-RUN dotnet restore
+# Copy project file and restore dependencies
+COPY ["Basic/WebAPI/WebAPI.csproj", "Basic/WebAPI/"]
+RUN dotnet restore "Basic/WebAPI/WebAPI.csproj"
 
-# Copy the project and publish it
-COPY . ./
-RUN dotnet publish -c Release -o out
+# Copy all files
+COPY . .
 
-# Runtime image
+# Publish
+WORKDIR "/src/Basic/WebAPI"
+RUN dotnet publish -c Release -o /app/publish
+
+# 2. Runtime image
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
-COPY --from=build /app/out ./
+COPY --from=build /app/publish .
 
 # Run the application
 ENTRYPOINT ["dotnet", "WebAPI.dll"]
