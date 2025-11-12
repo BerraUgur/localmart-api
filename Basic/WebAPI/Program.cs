@@ -119,7 +119,7 @@ app.RegisterLogEndpoints();
 app.UseStaticFiles();
 app.UseIpRateLimiting();
 
-//Apply migrations automatically(for render)
+// Apply migrations automatically
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDBContext>();
