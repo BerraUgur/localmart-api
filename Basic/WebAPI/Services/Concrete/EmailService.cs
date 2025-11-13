@@ -33,6 +33,12 @@ public class EmailService : IEmailService
             throw new InvalidOperationException("SendGrid sender email is not configured");
         }
 
+        if (string.IsNullOrWhiteSpace(subject))
+        {
+            _logger.LogError("Email subject is required");
+            throw new InvalidOperationException("Email subject cannot be empty");
+        }
+
         try
         {
             var client = new SendGridClient(apiKey);

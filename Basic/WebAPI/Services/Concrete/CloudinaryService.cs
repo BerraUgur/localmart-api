@@ -33,12 +33,15 @@ public class CloudinaryService : ICloudinaryService
         {
             if (string.IsNullOrEmpty(base64Image))
             {
+                _logger.LogWarning("Base64 image is null or empty, skipping upload");
                 return null;
             }
 
             // Remove data URI prefix if present
             var imageData = Regex.Replace(base64Image, "^data:image/[a-zA-Z]+;base64,", string.Empty);
             var bytes = Convert.FromBase64String(imageData);
+
+            _logger.LogInformation("Uploading image to Cloudinary, size: {Size} bytes", bytes.Length);
 
             using var stream = new MemoryStream(bytes);
             var uploadParams = new ImageUploadParams
@@ -49,12 +52,16 @@ public class CloudinaryService : ICloudinaryService
 
             var uploadResult = await _cloudinary.UploadAsync(uploadParams);
 
+            _logger.LogInformation("Cloudinary upload response: StatusCode={StatusCode}, Url={Url}", 
+                uploadResult.StatusCode, uploadResult.SecureUrl);
+
             if (uploadResult.StatusCode == System.Net.HttpStatusCode.OK)
             {
                 return uploadResult.SecureUrl.ToString();
             }
 
-            _logger.LogError("Cloudinary upload failed: {Error}", uploadResult.Error?.Message);
+            _logger.LogError("Cloudinary upload failed: StatusCode={StatusCode}, Error={Error}", 
+                uploadResult.StatusCode, uploadResult.Error?.Message);
             throw new Exception($"Image upload failed: {uploadResult.Error?.Message}");
         }
         catch (Exception ex)
