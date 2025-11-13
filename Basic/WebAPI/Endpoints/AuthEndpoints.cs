@@ -95,7 +95,8 @@ public static class AuthEndpoints
             try
             {
                 var emailBody = FormatEmailBody(request.Body);
-                await emailService.SendEmailAsync(request.To, request.Subject, emailBody);
+                var emailSubject = string.IsNullOrWhiteSpace(request.Subject) ? "Message from Localmart" : request.Subject;
+                await emailService.SendEmailAsync(request.To, emailSubject, emailBody);
 
                 return Results.Ok("Mail sent successfully");
             }
