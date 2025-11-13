@@ -8,7 +8,7 @@ using WebAPI.Services.Abstract;
 
 namespace WebAPI.Endpoints;
 
-public record MailRequest(string To, string Subject, string Body);
+public record MailRequest(string? To, string? Subject, string? Body);
 public record ForgotPasswordRequest(string Email);
 
 public static class AuthEndpoints
@@ -85,6 +85,12 @@ public static class AuthEndpoints
 
         auth.MapPost("send-mail", async (IAuthService authService, IEmailService emailService, MailRequest request, [FromServices] ILogger<object> logger) =>
         {
+            if (string.IsNullOrWhiteSpace(request.To))
+            {
+                logger.LogWarning("Email recipient is empty");
+                return Results.BadRequest("Email recipient cannot be empty");
+            }
+            
             var users = await authService.GetUserListAsync();
             bool exists = users.Any(u => u.Email == request.To);
             if (!exists)
