@@ -7,10 +7,12 @@ Localmart API is a robust .NET 7 WebAPI backend for the Localmart e-commerce pla
 - Secure login and registration
 - JWT-based authentication
 - Password reset and refresh token support
+- Email verification via SendGrid
 
 ### Product Management
 - Add, update, and delete products
 - View detailed product information
+- Cloud-based image storage with Cloudinary
 - Manage product images and descriptions
 
 ### Order Management
@@ -32,6 +34,10 @@ Localmart API is a robust .NET 7 WebAPI backend for the Localmart e-commerce pla
 ### Validation & Error Handling
 - Request validation using FluentValidation
 - Consistent error responses
+
+### Cloud Services Integration
+- **Cloudinary**: Image hosting and transformation
+- **SendGrid**: Transactional email delivery
 
 ## Development Setup
 
@@ -118,10 +124,51 @@ dotnet test
 - Entity Framework Core
 - JWT Authentication
 - Docker
-- Dbeaver
+- DBeaver
 - Swagger
-- postgreSQL
+- PostgreSQL
 - FluentValidation
+- **Cloudinary** - Cloud-based image storage
+- **SendGrid** - Email delivery service
+- **Render.com** - Production deployment
+
+### Environment Variables Required
+
+#### Database
+```
+PostgreSQL=Host=your_host;Port=5432;Database=your_db;Username=your_user;Password=your_password
+```
+
+#### JWT Configuration
+```
+TokenOptions__Audience=localmart
+TokenOptions__Issuer=localmart
+TokenOptions__AccessTokenExpiration=100
+TokenOptions__SecurityKey=your_secret_key
+```
+
+#### Cloudinary (Image Hosting)
+Sign up at [cloudinary.com](https://cloudinary.com) - Free tier includes:
+- 25 GB storage
+- 25 GB monthly bandwidth
+- 25,000 transformations per month
+
+```
+Cloudinary__CloudName=your_cloud_name
+Cloudinary__ApiKey=your_api_key
+Cloudinary__ApiSecret=your_api_secret
+```
+
+#### SendGrid (Email Service)
+Sign up at [sendgrid.com](https://sendgrid.com) - Free tier includes:
+- 100 emails per day
+- Email verification required for sender address
+
+```
+SendGrid__ApiKey=your_sendgrid_api_key
+SendGrid__SenderEmail=your_verified_email@example.com
+SendGrid__SenderName=Localmart
+```
 
 ## Contribution
 Contributions are welcome! Please fork the repository and submit a pull request.

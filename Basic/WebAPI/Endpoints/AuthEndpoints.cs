@@ -1,7 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Net;
-using System.Net.Mail;
 using WebAPI.Data;
 using WebAPI.Filters;
 using WebAPI.Models;
@@ -20,13 +18,6 @@ public static class AuthEndpoints
     public static void RegisterAuthEndpoints(this WebApplication app)
     {
         var config = app.Services.GetRequiredService<IConfiguration>();
-        var smtpSection = config.GetSection("Smtp");
-        var smtpHost = smtpSection["Host"];
-        var smtpPort = int.Parse(smtpSection["Port"] ?? "587");
-        var smtpEnableSsl = bool.Parse(smtpSection["EnableSsl"] ?? "true");
-        var smtpUser = smtpSection["User"];
-        var smtpPass = smtpSection["Password"];
-        var smtpSenderName = smtpSection["SenderName"];
         var frontendUrl = config["FrontendUrl"];
 
         var auth = app.MapGroup("auth").WithTags("Auth");
@@ -92,7 +83,7 @@ public static class AuthEndpoints
             return Results.NoContent();
         });
 
-        auth.MapPost("send-mail", async (IAuthService authService, MailRequest request, [FromServices] ILogger<object> logger) =>
+        auth.MapPost("send-mail", async (IAuthService authService, IEmailService emailService, MailRequest request, [FromServices] ILogger<object> logger) =>
         {
             var users = await authService.GetUserListAsync();
             bool exists = users.Any(u => u.Email == request.To);
@@ -104,14 +95,7 @@ public static class AuthEndpoints
             try
             {
                 var emailBody = FormatEmailBody(request.Body);
-
-                if (string.IsNullOrEmpty(smtpUser))
-                {
-                    logger.LogError("SMTP user is null or empty.");
-                    return Results.Problem("SMTP user is not configured.");
-                }
-                
-                await SendEmailAsync(smtpHost, smtpPort, smtpUser, smtpPass, smtpSenderName, smtpEnableSsl, request.To, request.Subject, emailBody);
+                await emailService.SendEmailAsync(request.To, request.Subject, emailBody);
 
                 return Results.Ok("Mail sent successfully");
             }
@@ -142,7 +126,7 @@ public static class AuthEndpoints
             await db.SaveChangesAsync();
             return Results.Ok("Password reset successful");
         });
-        auth.MapPost("forgot-password", async (IAuthService authService, ForgotPasswordRequest request, ApplicationDBContext db, [FromServices] ILogger<object> logger) =>
+        auth.MapPost("forgot-password", async (IAuthService authService, IEmailService emailService, ForgotPasswordRequest request, ApplicationDBContext db, [FromServices] ILogger<object> logger) =>
         {
             var user = await db.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
             if (user == null)
@@ -168,7 +152,7 @@ public static class AuthEndpoints
             
             try
             {
-                await SendEmailAsync(smtpHost, smtpPort, smtpUser, smtpPass, smtpSenderName, smtpEnableSsl, request.Email, "Password Reset", mailBody);
+                await emailService.SendEmailAsync(request.Email, "Password Reset", mailBody);
                 return Results.Ok("Password reset email sent successfully");
             }
             catch (Exception ex)
@@ -195,30 +179,5 @@ public static class AuthEndpoints
         }
         formattedBody += "</body></html>";
         return formattedBody;
-    }
-
-    private static async Task SendEmailAsync(string? host, int port, string? user, string? password, string? senderName, bool enableSsl, string to, string subject, string body)
-    {
-        if (string.IsNullOrEmpty(host) || string.IsNullOrEmpty(user) || string.IsNullOrEmpty(password))
-        {
-            throw new InvalidOperationException("SMTP configuration is incomplete.");
-        }
-
-        var mail = new MailMessage
-        {
-            From = new MailAddress(user, senderName),
-            Subject = subject,
-            Body = body,
-            IsBodyHtml = true
-        };
-        mail.To.Add(to);
-
-        using var smtp = new SmtpClient(host, port)
-        {
-            Credentials = new NetworkCredential(user, password),
-            EnableSsl = enableSsl
-        };
-
-        await smtp.SendMailAsync(mail);
     }
 }

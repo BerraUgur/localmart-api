@@ -12,12 +12,14 @@ public class ProductService : IProductService
     private readonly ApplicationDBContext _context;
     private readonly IHttpContextAccessor _contextAccessor;
     private readonly ILogger<ProductService> _logger;
+    private readonly ICloudinaryService _cloudinaryService;
 
-    public ProductService(ApplicationDBContext context, IHttpContextAccessor contextAccessor, ILogger<ProductService> logger)
+    public ProductService(ApplicationDBContext context, IHttpContextAccessor contextAccessor, ILogger<ProductService> logger, ICloudinaryService cloudinaryService)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _contextAccessor = contextAccessor ?? throw new ArgumentNullException(nameof(contextAccessor));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _cloudinaryService = cloudinaryService ?? throw new ArgumentNullException(nameof(cloudinaryService));
     }
 
     public async Task<IEnumerable<Product>> GetAllProductsAsync()
@@ -93,8 +95,8 @@ public class ProductService : IProductService
                 Description = productRequest.Description,
                 City = productRequest.City,
                 District = productRequest.District,
-                MainImage = SaveImage(productRequest.MainImage),
-                Images = productRequest.Images != null ? productRequest.Images.Select(SaveImage).ToList() : new List<string>()
+                MainImage = await SaveImageAsync(productRequest.MainImage),
+                Images = productRequest.Images != null ? (await Task.WhenAll(productRequest.Images.Select(SaveImageAsync))).ToList() : new List<string>()
             };
             _context.Products.Add(product);
             await _context.SaveChangesAsync();
@@ -129,13 +131,13 @@ public class ProductService : IProductService
                 _logger.LogWarning($"Access denied for product update. SellerUserId: {product.SellerUserId}");
                 throw new UnauthorizedAccessException("Access denied");
             }
-            if (product.MainImage != null && !product.MainImage.Contains("/images"))
+            if (product.MainImage != null && !product.MainImage.Contains("cloudinary.com"))
             {
-                product.MainImage = SaveImage(product.MainImage);
+                product.MainImage = await SaveImageAsync(product.MainImage);
             }
-            if (product.Images != null && product.Images.Any(x => x != null && !x.Contains("/images")))
+            if (product.Images != null && product.Images.Any(x => x != null && !x.Contains("cloudinary.com")))
             {
-                product.Images = product.Images.Select(SaveImage).ToList();
+                product.Images = (await Task.WhenAll(product.Images.Select(SaveImageAsync))).ToList();
             }
             else
             {
@@ -179,20 +181,13 @@ public class ProductService : IProductService
         }
     }
 
-    private string SaveImage(string base64Image)
+    private async Task<string> SaveImageAsync(string base64Image)
     {
         if (string.IsNullOrEmpty(base64Image))
         {
             return null;
         }
 
-        var imageData = Convert.FromBase64String(Regex.Replace(base64Image, "^data:image/[a-zA-Z]+;base64,", string.Empty));
-        var fileName = $"{Guid.NewGuid()}.jpg";
-        var filePath = Path.Combine("wwwroot", "images", fileName);
-
-        Directory.CreateDirectory(Path.GetDirectoryName(filePath));
-        File.WriteAllBytes(filePath, imageData);
-
-        return $"/images/{fileName}";
+        return await _cloudinaryService.UploadImageAsync(base64Image);
     }
 }
