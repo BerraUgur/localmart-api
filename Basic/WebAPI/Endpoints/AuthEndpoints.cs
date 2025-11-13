@@ -92,10 +92,19 @@ public static class AuthEndpoints
                 logger.LogWarning("Email not found in system: {Email}", request.To);
                 return Results.BadRequest("Email not found in system");
             }
+            
+            if (string.IsNullOrWhiteSpace(request.Body))
+            {
+                logger.LogWarning("Email body is empty for: {Email}", request.To);
+                return Results.BadRequest("Email body cannot be empty");
+            }
+            
             try
             {
                 var emailBody = FormatEmailBody(request.Body);
                 var emailSubject = string.IsNullOrWhiteSpace(request.Subject) ? "Message from Localmart" : request.Subject;
+                
+                logger.LogInformation("Sending email to {Email} with subject: {Subject}", request.To, emailSubject);
                 await emailService.SendEmailAsync(request.To, emailSubject, emailBody);
 
                 return Results.Ok("Mail sent successfully");
@@ -166,17 +175,27 @@ public static class AuthEndpoints
 
     private static string FormatEmailBody(string body)
     {
-        // Guard: body null or empty return default template
+        // Body should never be null/empty at this point due to validation
+        // But keep guard for safety
         if (string.IsNullOrWhiteSpace(body))
         {
             return "<html><body><p>No content provided.</p></body></html>";
+        }
+        
+        // If body doesn't contain the separator, treat as single line
+        if (!body.Contains(EmailSeparator))
+        {
+            return $"<html><body><p>{body}</p></body></html>";
         }
         
         string[] lines = body.Split(EmailSeparator, StringSplitOptions.None);
         var formattedBody = "<html><body>";
         foreach (var line in lines)
         {
-            formattedBody += $"<p>{line}</p>";
+            if (!string.IsNullOrWhiteSpace(line))
+            {
+                formattedBody += $"<p>{line}</p>";
+            }
         }
         formattedBody += "</body></html>";
         return formattedBody;
